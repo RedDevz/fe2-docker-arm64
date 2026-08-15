@@ -1,0 +1,37 @@
+services:
+  fe2_database:
+    image: mongo:8.0.28
+    container_name: fe2_database
+    restart: unless-stopped
+    volumes:
+      - ./data/mongodb:/data/db
+
+  fe2_app:
+    image: fe2-arm64:test
+    container_name: fe2_app
+    restart: "no"
+    hostname: fe2_vps
+
+    entrypoint: ["java"]
+    command: ["-jar", "/fe2.jar", "server"]
+
+    env_file:
+      - config.env
+
+    environment:
+      TZ: Europe/Berlin
+
+    ports:
+      - "83:83"
+      - "64112:64112"
+
+    volumes:
+      - ./data/fe2/config:/Config
+      - ./data/fe2/logs:/Logs
+      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ./data/cacerts:/usr/lib/jvm/java-25-amazon-corretto/lib/security/cacerts:ro
+
+    depends_on:
+      - fe2_database
