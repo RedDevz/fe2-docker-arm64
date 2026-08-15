@@ -29,6 +29,18 @@ fi
 echo "Architecture: $ARCH"
 
 echo
+echo "==> Checking image ENTRYPOINT"
+
+ENTRYPOINT="$(docker image inspect "$IMAGE" --format '{{json .Config.Entrypoint}}')"
+
+if [[ "$ENTRYPOINT" != '["java","-jar","/fe2.jar","server"]' ]]; then
+  echo "ERROR: Invalid ENTRYPOINT: $ENTRYPOINT"
+  exit 1
+fi
+
+echo "ENTRYPOINT: $ENTRYPOINT"
+
+echo
 echo "==> Checking Java"
 
 docker run --rm \
@@ -47,6 +59,19 @@ docker run -d \
 
 echo "Waiting for FE2 initialization..."
 sleep 45
+
+STATUS="$(docker inspect "$CONTAINER" --format '{{.State.Status}}')"
+EXIT_CODE="$(docker inspect "$CONTAINER" --format '{{.State.ExitCode}}')"
+
+echo "Container status: $STATUS"
+echo "Exit code: $EXIT_CODE"
+
+if [[ "$STATUS" == "exited" && "$EXIT_CODE" == "0" ]]; then
+  echo
+  echo "ERROR: Container exited cleanly instead of staying running."
+  echo "This usually means the image ENTRYPOINT/CMD is wrong or missing."
+  exit 1
+fi
 
 LOGS="$(docker logs "$CONTAINER" 2>&1 || true)"
 
