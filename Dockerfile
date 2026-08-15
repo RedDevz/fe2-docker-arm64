@@ -21,3 +21,5 @@ WORKDIR /
 
 EXPOSE 83
 EXPOSE 64112
+
+ENTRYPOINT ["java", "-jar", "/fe2.jar", "server"]

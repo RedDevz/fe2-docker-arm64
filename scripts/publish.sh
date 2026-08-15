@@ -12,7 +12,7 @@ fi
 GITHUB_USER="reddevz"
 PACKAGE="fe2-docker-arm64"
 
-LOCAL_IMAGE="fe2-arm64:${VERSION}"
+LOCAL_IMAGE="fe2-docker-arm64:${VERSION}"
 REMOTE_IMAGE="ghcr.io/${GITHUB_USER}/${PACKAGE}:${VERSION}"
 LATEST_IMAGE="ghcr.io/${GITHUB_USER}/${PACKAGE}:latest"
 

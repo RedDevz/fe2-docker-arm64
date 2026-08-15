@@ -11,7 +11,7 @@ fi
 
 IMAGE="alamosgmbh/fe2:${VERSION}"
 BUILD_DIR="$(pwd)/build"
-CONTAINER_NAME="fe2-arm64-extract"
+CONTAINER_NAME="fe2-docker-arm64-extract"
 
 echo "==> Preparing build directory"
 rm -rf "$BUILD_DIR"

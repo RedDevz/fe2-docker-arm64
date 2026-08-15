@@ -10,7 +10,7 @@ if [[ -z "$VERSION" ]]; then
 fi
 
 BUILD_DIR="$(pwd)/build"
-IMAGE="fe2-arm64:${VERSION}"
+IMAGE="fe2-docker-arm64:${VERSION}"
 
 if [[ ! -f "$BUILD_DIR/fe2.jar" ]]; then
   echo "Error: $BUILD_DIR/fe2.jar not found."
