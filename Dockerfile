@@ -1,3 +1,5 @@
+LABEL org.opencontainers.image.source="https://github.com/RedDevz/fe2-docker-arm64"
+
 FROM amazoncorretto:25-alpine
 
 RUN apk add --no-cache \
