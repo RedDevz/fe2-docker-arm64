@@ -2,3 +2,4 @@ fe2.jar
 config.env
 data/
 *.log
+build/

@@ -12,8 +12,8 @@ RUN apk add --no-cache \
 
 RUN update-ms-fonts
 
-COPY fe2.jar /fe2.jar
-COPY files /files
+COPY build/fe2.jar /fe2.jar
+COPY build/files /files
 
 WORKDIR /
 
