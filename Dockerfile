@@ -1,6 +1,6 @@
-LABEL org.opencontainers.image.source="https://github.com/RedDevz/fe2-docker-arm64"
-
 FROM amazoncorretto:25-alpine
+
+LABEL org.opencontainers.image.source="https://github.com/RedDevz/fe2-docker-arm64"
 
 RUN apk add --no-cache \
     nano \
