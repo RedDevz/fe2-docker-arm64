@@ -9,7 +9,7 @@ if [[ -z "$VERSION" ]]; then
   exit 1
 fi
 
-IMAGE="fe2-arm64:${VERSION}"
+IMAGE="fe2-docker-arm64:${VERSION}"
 CONTAINER="fe2-arm64-smoke"
 
 cleanup() {
