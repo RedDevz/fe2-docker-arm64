@@ -1,41 +1,46 @@
 # fe2-docker-arm64
 
-ARM64-compatible Docker build for [FE2](https://github.com/alamos-gmbh/fe2-docker) by Alamos.
+Native ARM64 Docker packaging for [FE2](https://github.com/alamos-gmbh/fe2-docker) by Alamos GmbH.
 
-The official FE2 Docker image is currently published for `linux/amd64` only. This repository provides the tooling required to extract the architecture-independent FE2 application files from the official image and rebuild them into a native `linux/arm64` container.
+The official FE2 Docker image is currently published for `linux/amd64`. This project provides tooling to extract the FE2 application files from the official image and package them into a native `linux/arm64` image without x86 emulation.
+
+> [!IMPORTANT]
+> FE2 is proprietary software owned by Alamos GmbH. This project is not affiliated with or endorsed by Alamos GmbH. Publishing the prebuilt ARM64 images in this repository has been permitted by Alamos GmbH. A valid FE2 licence/activation is still required to use FE2.
 
 ## Status
 
-Tested with:
+Currently tested with:
 
 - FE2 `2.41-STABLE`
 - Linux `arm64`
 - Amazon Corretto 25
 - MongoDB 8
-- Docker Compose
+- Docker / Docker Compose
 
-FE2 successfully starts natively on ARM64 and exposes its normal services on:
+The resulting FE2 container runs natively on ARM64 and exposes the normal FE2 services on:
 
 - `83/tcp`
 - `64112/tcp`
 
-No x86 emulation is required for the resulting FE2 container.
+No QEMU or other x86 emulation is required for the resulting FE2 container.
 
 ## Prebuilt image
 
-The ARM64 image is available from GitHub Container Registry:
+Prebuilt ARM64 images are published to GitHub Container Registry.
+
+Latest:
 
 ```bash
 docker pull ghcr.io/reddevz/fe2-docker-arm64:latest
 ```
 
-Or for a specific version:
+Specific FE2 version:
 
 ```bash
 docker pull ghcr.io/reddevz/fe2-docker-arm64:2.41-STABLE
 ```
 
-The image is built for:
+Image platform:
 
 ```text
 linux/arm64
@@ -43,37 +48,67 @@ linux/arm64
 
 ## How it works
 
-The official Alamos image contains the FE2 Java application and its runtime resources.
+The official Alamos image contains the FE2 Java application and its runtime resources. This project does not rebuild or modify FE2 source code.
 
-This project:
+The build process:
 
 1. Pulls the official `linux/amd64` FE2 image.
-2. Extracts `/fe2.jar` and `/files`.
+2. Extracts `/fe2.jar` and `/files` from that image.
 3. Builds a new ARM64 image based on Amazon Corretto 25.
-4. Installs the required ARM64 runtime dependencies.
-5. Runs a smoke test for obvious architecture or native-library failures.
-6. Optionally publishes the result to GHCR.
+4. Installs the ARM64-native runtime dependencies required by FE2.
+5. Verifies the resulting image architecture and Java runtime.
+6. Runs a startup smoke test for architecture and runtime failures.
+7. Optionally publishes the tested image to GHCR.
 
-The FE2 application itself does **not** need to be recompiled.
+The extracted FE2 files are stored only in the local `build/` directory and are ignored by Git.
 
-## Requirements
+## Quick start
 
-For building:
+A Docker Compose example is included as [`compose.example.yml`](./compose.example.yml).
+
+At minimum, the FE2 service can use the published image like this:
+
+```yaml
+services:
+  fe2_app:
+    image: ghcr.io/reddevz/fe2-docker-arm64:2.41-STABLE
+```
+
+FE2 still requires its normal configuration, MongoDB, persistent storage and activation credentials.
+
+Typical persistent mounts include:
+
+```yaml
+volumes:
+  - ./data/fe2/config:/Config
+  - ./data/fe2/logs:/Logs
+```
+
+A stable machine ID may also be required:
+
+```yaml
+volumes:
+  - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+```
+
+See the official [Alamos FE2 Docker repository](https://github.com/alamos-gmbh/fe2-docker) for the upstream FE2 Docker configuration and requirements.
+
+## Building locally
+
+### Requirements
 
 - Docker
 - Docker Compose
-- ARM64 Linux host recommended
 - Git
-- Access to the official `alamosgmbh/fe2` Docker image
+- Access to the official `alamosgmbh/fe2` image
+- ARM64 Linux host recommended
 
-The build has currently been tested natively on an ARM64 Linux VPS.
+The build process has been tested natively on an ARM64 Linux VPS.
 
-## Build manually
-
-Clone the repository:
+### Clone the repository
 
 ```bash
-git clone git@github.com:RedDevz/fe2-docker-arm64.git
+git clone https://github.com/RedDevz/fe2-docker-arm64.git
 cd fe2-docker-arm64
 ```
 
@@ -83,7 +118,7 @@ cd fe2-docker-arm64
 ./scripts/extract.sh 2.41-STABLE
 ```
 
-This pulls the official Alamos AMD64 image and extracts:
+This pulls the official AMD64 image and extracts:
 
 ```text
 build/
@@ -91,7 +126,7 @@ build/
 └── files/
 ```
 
-The extracted application files are ignored by Git and are not stored in this repository.
+These files are not committed to this repository.
 
 ### 2. Build the ARM64 image
 
@@ -105,7 +140,7 @@ This creates:
 fe2-arm64:2.41-STABLE
 ```
 
-The build script also verifies that the resulting image is actually `linux/arm64` and checks the Java runtime.
+The build script also verifies that the resulting image is `linux/arm64` and checks the Java runtime.
 
 ### 3. Run the smoke test
 
@@ -113,19 +148,28 @@ The build script also verifies that the resulting image is actually `linux/arm64
 ./scripts/smoke-test.sh 2.41-STABLE
 ```
 
-The smoke test checks for common architecture-related failures such as:
+The smoke test verifies, among other things:
+
+- image architecture is `arm64`
+- the expected FE2 `ENTRYPOINT` is present
+- Java starts successfully
+- the FE2 container stays running during initialization
+- no obvious ARM/native-library failures appear in the logs
+- no `UnsupportedClassVersionError` occurs
+
+It specifically looks for failures such as:
 
 ```text
-Exec format error
+exec format error
 wrong ELF
-Illegal instruction
+illegal instruction
 UnsatisfiedLinkError
 UnsupportedClassVersionError
 ```
 
-A successful smoke test does not replace a full FE2 installation test, but verifies that the ARM64 image can start without obvious architecture incompatibilities.
+A successful smoke test does not replace a complete FE2 installation test, but it catches common packaging and architecture problems before publishing.
 
-## Publish to GHCR
+## Publishing to GHCR
 
 After building and testing:
 
@@ -133,14 +177,14 @@ After building and testing:
 ./scripts/publish.sh 2.41-STABLE
 ```
 
-This publishes:
+This publishes both:
 
 ```text
 ghcr.io/reddevz/fe2-docker-arm64:2.41-STABLE
 ghcr.io/reddevz/fe2-docker-arm64:latest
 ```
 
-You must be logged into GHCR before publishing.
+You must be logged into GitHub Container Registry before publishing.
 
 Example:
 
@@ -148,9 +192,29 @@ Example:
 echo "$GHCR_TOKEN" | docker login ghcr.io -u reddevz --password-stdin
 ```
 
-## Updating to a new FE2 release
+## Updating for a new FE2 release
 
-When Alamos publishes a new FE2 Docker release, updating the ARM64 build should normally only require:
+The complete update workflow can be run with:
+
+```bash
+./scripts/update.sh NEW_VERSION
+```
+
+For example:
+
+```bash
+./scripts/update.sh 2.42-STABLE
+```
+
+The update script performs the full pipeline:
+
+```text
+extract -> build -> smoke test -> publish
+```
+
+Each new FE2 release should still be tested before being used in production because upstream changes may introduce new native dependencies or other ARM64 compatibility issues.
+
+The individual steps can also be run manually:
 
 ```bash
 ./scripts/extract.sh NEW_VERSION
@@ -159,60 +223,31 @@ When Alamos publishes a new FE2 Docker release, updating the ARM64 build should 
 ./scripts/publish.sh NEW_VERSION
 ```
 
-For example:
-
-```bash
-./scripts/extract.sh 2.42-STABLE
-./scripts/build.sh 2.42-STABLE
-./scripts/smoke-test.sh 2.42-STABLE
-./scripts/publish.sh 2.42-STABLE
-```
-
-Each new FE2 version should be tested before publishing because upstream updates may introduce new native dependencies that do not support ARM64.
-
-## Docker Compose
-
-A Compose example is included as:
+## Repository structure
 
 ```text
-compose.example.yml
-```
-
-Use the GHCR image in the FE2 application service:
-
-```yaml
-services:
-  fe2_app:
-    image: ghcr.io/reddevz/fe2-docker-arm64:latest
-```
-
-FE2 still requires its normal configuration, MongoDB, activation credentials and persistent volumes as described by Alamos.
-
-Typical persistent paths include:
-
-```text
-/Config
-/Logs
-```
-
-A stable machine ID may also be required by FE2:
-
-```yaml
-volumes:
-  - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+.
+├── Dockerfile
+├── README.md
+├── compose.example.yml
+├── scripts/
+│   ├── build.sh
+│   ├── extract.sh
+│   ├── publish.sh
+│   ├── smoke-test.sh
+│   └── update.sh
+└── build/              # generated locally, ignored by Git
 ```
 
 ## Architecture notes
 
-FE2 `2.41-STABLE` requires Java class file version `69`, which corresponds to Java 25.
-
-The ARM64 image therefore uses:
+FE2 `2.41-STABLE` uses Java class file version `69`, which corresponds to Java 25. The ARM64 image therefore uses:
 
 ```dockerfile
 FROM amazoncorretto:25-alpine
 ```
 
-Several dependencies bundled inside FE2 already contain ARM64-native binaries, including components for:
+Several dependencies bundled with FE2 already contain ARM64-native binaries, including components for:
 
 - JNA
 - gRPC / Netty
@@ -220,27 +255,45 @@ Several dependencies bundled inside FE2 already contain ARM64-native binaries, i
 - jSerialComm
 - Yggdrasil / Unleash
 
-The container additionally installs the ARM64 Alpine `libsodium` package.
+The image additionally installs the ARM64 Alpine `libsodium` package together with the other runtime packages required by FE2.
 
-## Disclaimer
+The image starts FE2 using:
+
+```dockerfile
+ENTRYPOINT ["java", "-jar", "/fe2.jar", "server"]
+```
+
+## Production use
+
+For production deployments, prefer a versioned image tag instead of `latest`:
+
+```yaml
+image: ghcr.io/reddevz/fe2-docker-arm64:2.41-STABLE
+```
+
+This prevents a later publish of `latest` from changing the image selected for an existing production deployment.
+
+Persistent FE2 and MongoDB data should be stored outside the container and backed up independently.
+
+## Disclaimer and permissions
 
 This project is **not affiliated with or endorsed by Alamos GmbH**.
 
-FE2 itself remains proprietary software owned by Alamos GmbH.
+FE2 itself remains proprietary software owned by Alamos GmbH. This repository does not contain the FE2 source code, licence credentials or user configuration.
 
-This repository does not contain FE2 source code, licence credentials or user configuration.
+The build scripts obtain FE2 application files from the official Alamos Docker image and repackage them for ARM64.
 
-The build scripts obtain FE2 application files from the official Alamos Docker image.
+**Alamos GmbH has granted permission for the resulting prebuilt ARM64 FE2 images to be published.** This permission does not make FE2 open-source and does not replace the normal FE2 licence or activation requirements.
 
-Before redistributing prebuilt images publicly, make sure that doing so is permitted by the applicable FE2 licence and terms.
+The code and tooling in this repository are separate from the proprietary FE2 application contained in the built image.
 
 ## Credits
 
 FE2 and the official Docker deployment:
 
-- Alamos GmbH
-- `alamos-gmbh/fe2-docker`
+- [Alamos GmbH](https://www.alamos-gmbh.com/)
+- [`alamos-gmbh/fe2-docker`](https://github.com/alamos-gmbh/fe2-docker)
 
 ARM64 compatibility tooling and packaging:
 
-- RedDevz
+- [RedDevz](https://github.com/RedDevz)
