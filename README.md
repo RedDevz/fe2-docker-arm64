@@ -11,7 +11,7 @@ The official FE2 Docker image is currently published for `linux/amd64`. This pro
 
 Currently tested with:
 
-- FE2 `2.41-STABLE`
+- FE2 `2.42-STABLE`
 - Linux `arm64`
 - Amazon Corretto 25
 - MongoDB 8
